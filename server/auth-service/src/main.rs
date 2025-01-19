@@ -1,6 +1,9 @@
-use actix_web::{middleware, web, App};
+use actix_web::{middleware, post, web, App, Error as AWError, HttpResponse, HttpServer};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
+use std::io;
+//use sha2::{Digest, Sha256};
 
 #[derive(Deserialize)]
 struct LoginRequest {
@@ -10,10 +13,10 @@ struct LoginRequest {
 
 #[post("/login")]
 async fn handle_login(form: web::Form<LoginRequest>) -> Result<HttpResponse, AWError> {
-    let mut hasher = Sha256::new();
-    hasher.update(form.password.clone());
-    let result = hasher.finalize();
-    let hex_string = hex::encode(result);
+    //let mut hasher = Sha256::new();
+    //hasher.update(form.password.clone());
+    //let result = hasher.finalize();
+    //let hex_string = hex::encode(result);
 
     Ok(HttpResponse::Ok().finish())
 }
@@ -22,7 +25,7 @@ async fn handle_login(form: web::Form<LoginRequest>) -> Result<HttpResponse, AWE
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let manager = SqliteConnectionManager::file("database.db");
+    let manager = SqliteConnectionManager::file("../../database.db");
     let pool = Pool::new(manager).expect("Database not found");
 
     {

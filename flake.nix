@@ -46,8 +46,7 @@
               eslint_d
               nixfmt-rfc-style
               prettierd
-              dockerfile-language-server-nodejs
-              insomnia
+              docker-compose-language-service
             ];
           };
       });

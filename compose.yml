@@ -1,0 +1,46 @@
+services:
+  client:
+    image: oven/bun
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: >
+      sh -c "bun install &&
+             bun run dev --host"
+
+  table-service:
+    image: rust:latest
+    working_dir: /usr/src/app
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server/table-service:/usr/src/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/usr/src/app/target
+    command: >
+      sh -c "cargo build &&
+             cargo run"
+    restart: always
+
+  auth-service:
+    image: rust:latest
+    working_dir: /usr/src/app
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./server/auth-service:/usr/src/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/usr/src/app/target
+    command: >
+      sh -c "cargo build &&
+             cargo run"
+    restart: always
+
+volumes:
+  cargo-cache:
+  target-cache:

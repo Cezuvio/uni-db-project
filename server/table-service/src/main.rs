@@ -56,23 +56,8 @@ pub async fn handle_create_table(
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let manager = SqliteConnectionManager::file("database.db");
+    let manager = SqliteConnectionManager::file("../../database.db");
     let pool = Pool::new(manager).expect("Database not found");
-
-    {
-        let conn = pool.get().expect("Failed to get database connection");
-        conn.execute(
-            r#"
-        CREATE TABLE IF NOT EXISTS admins (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
-        );
-        "#,
-            [],
-        )
-        .expect("Failed to initialize 'admins' table");
-    }
 
     log::info!("starting HTTP server at https://localhost:8080");
 

@@ -44,7 +44,7 @@ pub async fn execute(pool: &Pool, query: Queries) -> Result<Vec<DbAction>, actix
 fn get_all_tables(conn: Connection) -> Result<Vec<DbAction>, rusqlite::Error> {
     let mut stmt = conn.prepare(
         "SELECT name FROM sqlite_master 
-         WHERE type='table'",
+         WHERE type='table' AND name != 'sqlite_sequence'",
     )?;
 
     stmt.query_map([], |row| Ok(DbAction::Table(Table { name: row.get(0)? })))

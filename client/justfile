@@ -1,0 +1,18 @@
+NAME:="client"
+PORT:="5173"
+NETWORK:="net"
+
+net:
+  docker network create {{NETWORK}}
+
+build:
+  docker build -t {{NAME}} .
+
+run: stop
+  docker run --network {{NETWORK}} --init -p {{PORT}}:{{PORT}} -v $(pwd):/app -v /app/node_modules --rm --name {{NAME}} {{NAME}}
+
+stop:
+  if [ $(docker ps -q -f name={{NAME}} | wc -l) -gt 0 ]; then docker stop {{NAME}}; fi
+
+clean: stop
+  if [ $(docker ps -q -f name={{NAME}} | wc -l) -gt 0 ]; then docker rm {{NAME}}; fi

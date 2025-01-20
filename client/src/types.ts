@@ -7,3 +7,11 @@ export interface Services {
   auth: string;
   row: string;
 }
+
+export interface Row {
+  name: string;
+  column_type: string;
+  is_nullable: boolean;
+  default_value: string;
+  is_unique: boolean;
+}

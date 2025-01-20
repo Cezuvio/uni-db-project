@@ -26,9 +26,19 @@ async fn main() -> io::Result<()> {
 
     let pool = MySqlPoolOptions::new()
         .max_connections(5)
-        .connect(&std::env::var("DATABASE_URL").unwrap())
+        .connect(&std::env::var("DATABASE_URL").expect("DATABASE_URL env var not set"))
         .await
         .unwrap();
+
+    sqlx::query!(
+        "CREATE TABLE IF NOT EXISTS admins (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100)
+        );"
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
 
     HttpServer::new(move || {
         App::new()

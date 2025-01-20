@@ -41,7 +41,7 @@ services:
       - target-cache:/usr/src/app/target
     environment:
       - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
-    command: cargo run --bin table-service
+    command: cargo run --bin auth-service
     restart: always
     depends_on:
       - db
@@ -57,7 +57,7 @@ services:
       - target-cache:/usr/src/app/target
     environment:
       - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
-    command: cargo run --bin table-service
+    command: cargo run --bin row-service
     restart: always
     depends_on:
       - db

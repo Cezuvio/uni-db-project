@@ -3,8 +3,26 @@ use serde::{Deserialize, Serialize};
 use sqlx::{mysql::MySqlPool, Error as SqlxError};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum ColumnType {
+    Integer,
+    String,
+    Float,
+    Boolean,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Column {
+    pub name: String,
+    pub column_type: ColumnType,
+    pub is_nullable: bool,
+    pub default_value: Option<String>,
+    pub is_unique: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Table {
     pub name: String,
+    //pub columns: Vec<Column>,
 }
 
 #[allow(clippy::enum_variant_names)]

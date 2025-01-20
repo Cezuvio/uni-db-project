@@ -1,5 +1,7 @@
 <script lang="ts">
-  export let serverAddress: string;
+  import type { Services } from "../../types";
+
+  export let services: Services;
 
   let popup = false;
   let username = "";
@@ -13,15 +15,16 @@
     name: string,
     password: string,
   ): Promise<void> {
-    console.log(name, password);
     try {
-      const response = await fetch(serverAddress + "/login", {
+      const response = await fetch(services.auth + "/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
         body: `name=${encodeURIComponent(name)}&password=${encodeURIComponent(password)}`,
       });
+
+      console.log(await response.json());
     } catch (error) {}
   }
 </script>

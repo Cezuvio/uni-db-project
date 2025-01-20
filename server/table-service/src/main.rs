@@ -14,16 +14,6 @@ async fn handle_get_tables(pool: web::Data<Pool>) -> Result<HttpResponse, AWErro
     Ok(HttpResponse::Ok().json(res.map_err(AWError::from)?))
 }
 
-#[get("/tables/{name}")]
-pub async fn handle_get_table(
-    pool: web::Data<Pool>,
-    name: web::Path<String>,
-) -> Result<HttpResponse, Error> {
-    let res = db::execute(&pool, Queries::GetAllRows(name.into_inner())).await;
-
-    Ok(HttpResponse::Ok().json(res.map_err(AWError::from)?))
-}
-
 #[delete("/tables/{name}")]
 pub async fn handle_delete_table(
     pool: web::Data<Pool>,
@@ -59,6 +49,21 @@ async fn main() -> io::Result<()> {
     let manager = SqliteConnectionManager::file("../../database.db");
     let pool = Pool::new(manager).expect("Database not found");
 
+    {
+        let conn = pool.get().expect("Failed to get database connection");
+        conn.execute(
+            r#"
+        CREATE TABLE IF NOT EXISTS admins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            password TEXT NOT NULL
+        );
+        "#,
+            [],
+        )
+        .expect("Failed to initialize 'admins' table");
+    }
+
     log::info!("starting HTTP server at https://localhost:8080");
 
     HttpServer::new(move || {
@@ -68,7 +73,6 @@ async fn main() -> io::Result<()> {
             .service(handle_get_tables)
             .service(handle_create_table)
             .service(handle_delete_table)
-            .service(handle_get_table)
     })
     .bind(("0.0.0.0", 8080))?
     .workers(2)

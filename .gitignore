@@ -1,4 +1,5 @@
 server/auth-service/target
 server/table-service/target
+server/row-service/target
 client/node_modules
 .direnv

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { Table } from "../../types";
+  import type { Table, Services } from "../../types";
 
   export let tables: Table[];
-  export let serverAddress: string;
+  export let services: Services;
   export let index: number;
 
   let table = tables[index];
@@ -18,7 +18,7 @@
   async function remove(name: string | null): Promise<void> {
     if (name == null) return;
 
-    const response = await fetch(serverAddress + "/tables/" + name, {
+    const response = await fetch(services.table + "/tables/" + name, {
       method: "DELETE",
     });
 

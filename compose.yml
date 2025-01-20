@@ -22,9 +22,7 @@ services:
       - ./server/table-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
-    command: >
-      sh -c "cargo build &&
-             cargo run"
+    command: cargo run
     restart: always
 
   auth-service:
@@ -36,9 +34,19 @@ services:
       - ./server/auth-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
-    command: >
-      sh -c "cargo build &&
-             cargo run"
+    command: cargo run
+    restart: always
+
+  row-service:
+    image: rust:latest
+    working_dir: /usr/src/app
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./server/row-service:/usr/src/app
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/usr/src/app/target
+    command: cargo run
     restart: always
 
 volumes:

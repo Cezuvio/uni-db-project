@@ -1,7 +1,7 @@
 <script lang="ts">
-  import type { Table } from "../../types";
+  import type { Table, Services } from "../../types";
 
-  export let serverAddress: string;
+  export let services: Services;
   export let tables: Table[];
 
   let name: string | null = null;
@@ -15,7 +15,7 @@
   async function addTable(name: string | null): Promise<void> {
     if (name == null) return;
 
-    const response = await fetch(serverAddress + "/table", {
+    const response = await fetch(services.table + "/table", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",

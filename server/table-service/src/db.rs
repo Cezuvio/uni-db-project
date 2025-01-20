@@ -12,7 +12,6 @@ pub struct Table {
 #[allow(clippy::enum_variant_names)]
 pub enum Queries {
     GetAllTables,
-    GetAllRows(String),
     CreateTable(String),
     DeleteTable(String),
 }
@@ -33,7 +32,6 @@ pub async fn execute(pool: &Pool, query: Queries) -> Result<Vec<DbAction>, actix
         .map_err(error::ErrorInternalServerError)?;
     web::block(move || match query {
         Queries::GetAllTables => get_all_tables(conn),
-        Queries::GetAllRows(name) => get_all_rows(conn, name),
         Queries::CreateTable(name) => create_table(conn, name),
         Queries::DeleteTable(name) => delete_table(conn, name),
     })
@@ -84,26 +82,4 @@ fn create_table(conn: Connection, name: String) -> Result<Vec<DbAction>, rusqlit
     )?;
 
     Ok(vec![DbAction::Created])
-}
-
-fn get_all_rows(conn: Connection, table_name: String) -> Result<Vec<DbAction>, rusqlite::Error> {
-    let exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-            [&table_name],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
-
-    if !exists {
-        return Ok(vec![]);
-    }
-
-    let mut stmt = conn.prepare(&format!("SELECT json_object(*) FROM {}", table_name))?;
-    let rows = stmt.query_map([], |row| {
-        let json_str: String = row.get(0)?;
-        Ok(DbAction::Row(json_str))
-    })?;
-
-    rows.collect()
 }

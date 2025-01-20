@@ -1,24 +1,14 @@
-use actix_web::{middleware, post, web, App, Error as AWError, HttpResponse, HttpServer};
-use r2d2::Pool;
+use actix_web::{get, middleware, web, App, Error, HttpResponse, HttpServer};
 use r2d2_sqlite::SqliteConnectionManager;
-use serde::Deserialize;
-use sha2::{Digest, Sha256};
 use std::io;
+pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
 
-#[derive(Deserialize)]
-struct LoginRequest {
-    name: String,
-    password: String,
-}
-
-#[post("/login")]
-async fn handle_login(form: web::Form<LoginRequest>) -> Result<HttpResponse, AWError> {
-    let mut hasher = Sha256::new();
-    hasher.update(form.password.clone());
-    let result = hasher.finalize();
-    let hex_string = hex::encode(result);
-
-    Ok(HttpResponse::Ok().json(hex_string))
+#[get("/tables/{name}")]
+pub async fn handle_get_table(
+    pool: web::Data<Pool>,
+    name: web::Path<String>,
+) -> Result<HttpResponse, Error> {
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[actix_web::main]
@@ -34,7 +24,7 @@ async fn main() -> io::Result<()> {
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .wrap(middleware::Logger::default())
-            .service(handle_login)
+            .service(handle_get_table)
     })
     .bind(("0.0.0.0", 8080))?
     .workers(2)

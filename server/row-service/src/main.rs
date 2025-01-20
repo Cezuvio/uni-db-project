@@ -1,13 +1,12 @@
-use actix_web::{get, middleware, web, App, Error, HttpResponse, HttpServer};
-use r2d2_sqlite::SqliteConnectionManager;
+use actix_web::{get, middleware, web, App, Error as AWError, HttpResponse, HttpServer};
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions};
 use std::io;
-pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
 
 #[get("/tables/{name}")]
 pub async fn handle_get_table(
-    pool: web::Data<Pool>,
+    pool: web::Data<SqlitePool>,
     name: web::Path<String>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, AWError> {
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -15,10 +14,11 @@ pub async fn handle_get_table(
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let manager = SqliteConnectionManager::file("../../database.db");
-    let pool = Pool::new(manager).expect("Database not found");
-
-    log::info!("starting HTTP server at https://localhost:8080");
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&std::env::var("DATABASE_URL").unwrap())
+        .await
+        .unwrap();
 
     HttpServer::new(move || {
         App::new()

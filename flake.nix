@@ -37,7 +37,6 @@
               typescript-language-server
               pkg-config
               openssl
-              sqlite
               docker
               just
               bun
@@ -47,7 +46,12 @@
               nixfmt-rfc-style
               prettierd
               docker-compose-language-service
+              sqlite
             ];
+
+            shellHook = ''
+              export DATABASE_URL="sqlite:$(pwd)/server/database.db"
+            '';
           };
       });
     };

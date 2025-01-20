@@ -22,6 +22,9 @@ services:
       - ./server/table-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
+      - ./server/database.db:/usr/src/app/server/database.db
+    environment:
+      - DATABASE_URL=sqlite:/usr/src/app/server/database.db
     command: cargo run
     restart: always
 
@@ -34,6 +37,9 @@ services:
       - ./server/auth-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
+      - ./server/database.db:/usr/src/app/server/database.db
+    environment:
+      - DATABASE_URL=sqlite:/usr/src/app/server/database.db
     command: cargo run
     restart: always
 
@@ -46,6 +52,9 @@ services:
       - ./server/row-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
+      - ./server/database.db:/usr/src/app/server/database.db
+    environment:
+      - DATABASE_URL=sqlite:/usr/src/app/server/database.db
     command: cargo run
     restart: always
 

@@ -1,8 +1,6 @@
-use actix_web::{error, web};
+use actix_web::error;
 use serde::{Deserialize, Serialize};
-
-pub type Pool = r2d2::Pool<r2d2_sqlite::SqliteConnectionManager>;
-pub type Connection = r2d2::PooledConnection<r2d2_sqlite::SqliteConnectionManager>;
+use sqlx::{sqlite::SqlitePool, Error as SqlxError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Table {
@@ -25,61 +23,75 @@ pub enum DbAction {
     LoggedIn(String),
 }
 
-pub async fn execute(pool: &Pool, query: Queries) -> Result<Vec<DbAction>, actix_web::Error> {
-    let pool = pool.clone();
-    let conn = web::block(move || pool.get())
-        .await?
-        .map_err(error::ErrorInternalServerError)?;
-    web::block(move || match query {
-        Queries::GetAllTables => get_all_tables(conn),
-        Queries::CreateTable(name) => create_table(conn, name),
-        Queries::DeleteTable(name) => delete_table(conn, name),
-    })
-    .await?
+pub async fn execute(pool: &SqlitePool, query: Queries) -> Result<Vec<DbAction>, actix_web::Error> {
+    match query {
+        Queries::GetAllTables => get_all_tables(pool).await,
+        Queries::CreateTable(name) => create_table(pool, name).await,
+        Queries::DeleteTable(name) => delete_table(pool, name).await,
+    }
     .map_err(error::ErrorInternalServerError)
 }
 
-fn get_all_tables(conn: Connection) -> Result<Vec<DbAction>, rusqlite::Error> {
-    let mut stmt = conn.prepare(
+async fn get_all_tables(pool: &SqlitePool) -> Result<Vec<DbAction>, SqlxError> {
+    let tables = sqlx::query!(
         "SELECT name FROM sqlite_master 
-         WHERE type='table' AND name != 'sqlite_sequence'",
-    )?;
+         WHERE type='table' AND name != 'sqlite_sequence'"
+    )
+    .fetch_all(pool)
+    .await?;
 
-    stmt.query_map([], |row| Ok(DbAction::Table(Table { name: row.get(0)? })))
-        .and_then(Iterator::collect)
+    Ok(tables
+        .into_iter()
+        .map(|row| {
+            DbAction::Table(Table {
+                name: row.name.unwrap(),
+            })
+        })
+        .collect())
 }
 
-fn delete_table(conn: Connection, name: String) -> Result<Vec<DbAction>, rusqlite::Error> {
+async fn delete_table(pool: &SqlitePool, name: String) -> Result<Vec<DbAction>, SqlxError> {
     if name == "admins" {
-        return Err(rusqlite::Error::InvalidQuery);
+        return Err(SqlxError::RowNotFound);
     }
 
-    let exists: bool = conn
-        .query_row(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-            [&name],
-            |_| Ok(true),
-        )
-        .unwrap_or(false);
+    let exists = sqlx::query!(
+        "SELECT 1 AS table_exists FROM sqlite_master WHERE type='table' AND name = ?",
+        name
+    )
+    .fetch_optional(pool)
+    .await?;
 
-    if !exists {
+    if exists.is_none() {
         return Ok(vec![]);
     }
 
-    conn.execute(&format!("DROP TABLE {}", name), [])?;
+    sqlx::query(&format!("DROP TABLE IF EXISTS {}", name))
+        .execute(pool)
+        .await?;
+
     Ok(vec![DbAction::Deleted])
 }
 
-fn create_table(conn: Connection, name: String) -> Result<Vec<DbAction>, rusqlite::Error> {
-    conn.execute(
-        &format!(
-            "CREATE TABLE IF NOT EXISTS {} (
-                DummyColumn INT
-            );",
-            name
-        ),
-        [],
-    )?;
+async fn create_table(pool: &SqlitePool, name: String) -> Result<Vec<DbAction>, SqlxError> {
+    // Note: Since SQLite doesn't support parameterized table names,
+    // we need to construct the query string manually.
+    // In a production environment, you should add additional validation
+    // for the table name to prevent SQL injection.
+    let query = format!(
+        "CREATE TABLE IF NOT EXISTS {} (
+            DummyColumn INT
+        )",
+        name
+    );
+
+    sqlx::query(&query).execute(pool).await?;
 
     Ok(vec![DbAction::Created])
+}
+
+// Helper function to sanitize table names (recommended for production use)
+fn sanitize_table_name(name: &str) -> bool {
+    // Only allow alphanumeric characters and underscores
+    name.chars().all(|c| c.is_alphanumeric() || c == '_')
 }

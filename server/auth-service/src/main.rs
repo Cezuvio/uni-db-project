@@ -1,8 +1,9 @@
+mod db;
+
 use actix_web::{middleware, post, web, App, Error as AWError, HttpResponse, HttpServer};
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
+use sqlx::sqlite::SqlitePoolOptions;
 use std::io;
 
 #[derive(Deserialize)]
@@ -25,10 +26,11 @@ async fn handle_login(form: web::Form<LoginRequest>) -> Result<HttpResponse, AWE
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let manager = SqliteConnectionManager::file("../../database.db");
-    let pool = Pool::new(manager).expect("Database not found");
-
-    log::info!("starting HTTP server at https://localhost:8080");
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&std::env::var("DATABASE_URL").unwrap())
+        .await
+        .unwrap();
 
     HttpServer::new(move || {
         App::new()

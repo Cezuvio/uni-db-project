@@ -1,24 +1,23 @@
 mod db;
 
 use actix_web::{
-    delete, get, middleware, post, web, App, Error as AWError, Error, HttpResponse, HttpServer,
+    delete, get, middleware, post, web, App, Error as AWError, HttpResponse, HttpServer,
 };
-use db::{DbAction, Pool, Queries, Table};
-use r2d2_sqlite::SqliteConnectionManager;
+use db::{DbAction, Queries, Table};
+use sqlx::sqlite::{SqlitePool, SqlitePoolOptions}; // Use sqlx for pooling
 use std::io;
 
 #[get("/tables")]
-async fn handle_get_tables(pool: web::Data<Pool>) -> Result<HttpResponse, AWError> {
+async fn handle_get_tables(pool: web::Data<SqlitePool>) -> Result<HttpResponse, AWError> {
     let res = db::execute(&pool, Queries::GetAllTables).await;
-
     Ok(HttpResponse::Ok().json(res.map_err(AWError::from)?))
 }
 
 #[delete("/tables/{name}")]
 pub async fn handle_delete_table(
-    pool: web::Data<Pool>,
+    pool: web::Data<SqlitePool>,
     name: web::Path<String>,
-) -> Result<HttpResponse, Error> {
+) -> Result<HttpResponse, AWError> {
     let result = db::execute(&pool, Queries::DeleteTable(name.into_inner())).await?;
 
     match result.as_slice() {
@@ -31,8 +30,8 @@ pub async fn handle_delete_table(
 #[post("/table")]
 pub async fn handle_create_table(
     form: web::Form<Table>,
-    pool: web::Data<Pool>,
-) -> Result<HttpResponse, Error> {
+    pool: web::Data<SqlitePool>,
+) -> Result<HttpResponse, AWError> {
     let result = db::execute(&pool, Queries::CreateTable(form.name.clone())).await?;
 
     match result.as_slice() {
@@ -46,25 +45,11 @@ pub async fn handle_create_table(
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let manager = SqliteConnectionManager::file("../../database.db");
-    let pool = Pool::new(manager).expect("Database not found");
-
-    {
-        let conn = pool.get().expect("Failed to get database connection");
-        conn.execute(
-            r#"
-        CREATE TABLE IF NOT EXISTS admins (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            password TEXT NOT NULL
-        );
-        "#,
-            [],
-        )
-        .expect("Failed to initialize 'admins' table");
-    }
-
-    log::info!("starting HTTP server at https://localhost:8080");
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&std::env::var("DATABASE_URL").unwrap())
+        .await
+        .unwrap();
 
     HttpServer::new(move || {
         App::new()

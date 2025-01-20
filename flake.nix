@@ -50,7 +50,7 @@
             ];
 
             shellHook = ''
-              export DATABASE_URL="sqlite:$(pwd)/server/database.db"
+              export DATABASE_URL=mysql://user:password@localhost:3306/db?ssl-mode=DISABLED
             '';
           };
       });

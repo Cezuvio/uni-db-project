@@ -1,9 +1,7 @@
-mod db;
-
 use actix_web::{middleware, post, web, App, Error as AWError, HttpResponse, HttpServer};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::mysql::MySqlPoolOptions;
 use std::io;
 
 #[derive(Deserialize)]
@@ -26,7 +24,7 @@ async fn handle_login(form: web::Form<LoginRequest>) -> Result<HttpResponse, AWE
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let pool = SqlitePoolOptions::new()
+    let pool = MySqlPoolOptions::new()
         .max_connections(5)
         .connect(&std::env::var("DATABASE_URL").unwrap())
         .await

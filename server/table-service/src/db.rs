@@ -1,6 +1,6 @@
 use actix_web::error;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqlitePool, Error as SqlxError};
+use sqlx::{mysql::MySqlPool, Error as SqlxError};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Table {
@@ -23,7 +23,7 @@ pub enum DbAction {
     LoggedIn(String),
 }
 
-pub async fn execute(pool: &SqlitePool, query: Queries) -> Result<Vec<DbAction>, actix_web::Error> {
+pub async fn execute(pool: &MySqlPool, query: Queries) -> Result<Vec<DbAction>, actix_web::Error> {
     match query {
         Queries::GetAllTables => get_all_tables(pool).await,
         Queries::CreateTable(name) => create_table(pool, name).await,
@@ -32,31 +32,32 @@ pub async fn execute(pool: &SqlitePool, query: Queries) -> Result<Vec<DbAction>,
     .map_err(error::ErrorInternalServerError)
 }
 
-async fn get_all_tables(pool: &SqlitePool) -> Result<Vec<DbAction>, SqlxError> {
+async fn get_all_tables(pool: &MySqlPool) -> Result<Vec<DbAction>, SqlxError> {
     let tables = sqlx::query!(
-        "SELECT name FROM sqlite_master 
-         WHERE type='table' AND name != 'sqlite_sequence'"
+        "SELECT TABLE_NAME AS name FROM information_schema.tables 
+         WHERE table_schema = DATABASE()"
     )
     .fetch_all(pool)
     .await?;
 
     Ok(tables
         .into_iter()
-        .map(|row| {
-            DbAction::Table(Table {
-                name: row.name.unwrap(),
-            })
-        })
+        .map(|row| DbAction::Table(Table { name: row.name }))
         .collect())
 }
 
-async fn delete_table(pool: &SqlitePool, name: String) -> Result<Vec<DbAction>, SqlxError> {
+async fn delete_table(pool: &MySqlPool, name: String) -> Result<Vec<DbAction>, SqlxError> {
+    if !sanitize_table_name(&name) {
+        return Err(SqlxError::RowNotFound);
+    }
+
     if name == "admins" {
         return Err(SqlxError::RowNotFound);
     }
 
     let exists = sqlx::query!(
-        "SELECT 1 AS table_exists FROM sqlite_master WHERE type='table' AND name = ?",
+        "SELECT 1 AS table_exists FROM information_schema.tables 
+         WHERE table_schema = DATABASE() AND TABLE_NAME = ?",
         name
     )
     .fetch_optional(pool)
@@ -66,20 +67,20 @@ async fn delete_table(pool: &SqlitePool, name: String) -> Result<Vec<DbAction>, 
         return Ok(vec![]);
     }
 
-    sqlx::query(&format!("DROP TABLE IF EXISTS {}", name))
+    sqlx::query(&format!("DROP TABLE IF EXISTS `{}`", name))
         .execute(pool)
         .await?;
 
     Ok(vec![DbAction::Deleted])
 }
 
-async fn create_table(pool: &SqlitePool, name: String) -> Result<Vec<DbAction>, SqlxError> {
-    // Note: Since SQLite doesn't support parameterized table names,
-    // we need to construct the query string manually.
-    // In a production environment, you should add additional validation
-    // for the table name to prevent SQL injection.
+async fn create_table(pool: &MySqlPool, name: String) -> Result<Vec<DbAction>, SqlxError> {
+    if !sanitize_table_name(&name) {
+        return Err(SqlxError::RowNotFound);
+    }
+
     let query = format!(
-        "CREATE TABLE IF NOT EXISTS {} (
+        "CREATE TABLE IF NOT EXISTS `{}` (
             DummyColumn INT
         )",
         name
@@ -90,8 +91,6 @@ async fn create_table(pool: &SqlitePool, name: String) -> Result<Vec<DbAction>, 
     Ok(vec![DbAction::Created])
 }
 
-// Helper function to sanitize table names (recommended for production use)
 fn sanitize_table_name(name: &str) -> bool {
-    // Only allow alphanumeric characters and underscores
     name.chars().all(|c| c.is_alphanumeric() || c == '_')
 }

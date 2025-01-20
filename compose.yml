@@ -12,6 +12,8 @@ services:
     command: >
       sh -c "bun install &&
              bun run dev --host"
+    depends_on:
+      - db
 
   table-service:
     image: rust:latest
@@ -22,11 +24,11 @@ services:
       - ./server/table-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
-      - ./server/database.db:/usr/src/app/server/database.db
     environment:
-      - DATABASE_URL=sqlite:/usr/src/app/server/database.db
-    command: cargo run
-    restart: always
+      - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
+    command: cargo run --bin table-service
+    depends_on:
+      - db
 
   auth-service:
     image: rust:latest
@@ -37,11 +39,12 @@ services:
       - ./server/auth-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
-      - ./server/database.db:/usr/src/app/server/database.db
     environment:
-      - DATABASE_URL=sqlite:/usr/src/app/server/database.db
-    command: cargo run
+      - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
+    command: cargo run --bin table-service
     restart: always
+    depends_on:
+      - db
 
   row-service:
     image: rust:latest
@@ -52,12 +55,29 @@ services:
       - ./server/row-service:/usr/src/app
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
-      - ./server/database.db:/usr/src/app/server/database.db
     environment:
-      - DATABASE_URL=sqlite:/usr/src/app/server/database.db
-    command: cargo run
+      - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
+    command: cargo run --bin table-service
     restart: always
+    depends_on:
+      - db
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_DATABASE: "db"
+      MYSQL_USER: "user"
+      MYSQL_PASSWORD: "password"
+      MYSQL_ROOT_PASSWORD: "password"
+    ports:
+      - "3306:3306"
+    expose:
+      - "3306"
+    volumes:
+      - database:/var/lib/mysql
 
 volumes:
   cargo-cache:
   target-cache:
+  database:

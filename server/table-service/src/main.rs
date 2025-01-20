@@ -4,18 +4,18 @@ use actix_web::{
     delete, get, middleware, post, web, App, Error as AWError, HttpResponse, HttpServer,
 };
 use db::{DbAction, Queries, Table};
-use sqlx::sqlite::{SqlitePool, SqlitePoolOptions}; // Use sqlx for pooling
+use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 use std::io;
 
 #[get("/tables")]
-async fn handle_get_tables(pool: web::Data<SqlitePool>) -> Result<HttpResponse, AWError> {
+async fn handle_get_tables(pool: web::Data<MySqlPool>) -> Result<HttpResponse, AWError> {
     let res = db::execute(&pool, Queries::GetAllTables).await;
     Ok(HttpResponse::Ok().json(res.map_err(AWError::from)?))
 }
 
 #[delete("/tables/{name}")]
 pub async fn handle_delete_table(
-    pool: web::Data<SqlitePool>,
+    pool: web::Data<MySqlPool>,
     name: web::Path<String>,
 ) -> Result<HttpResponse, AWError> {
     let result = db::execute(&pool, Queries::DeleteTable(name.into_inner())).await?;
@@ -30,7 +30,7 @@ pub async fn handle_delete_table(
 #[post("/table")]
 pub async fn handle_create_table(
     form: web::Form<Table>,
-    pool: web::Data<SqlitePool>,
+    pool: web::Data<MySqlPool>,
 ) -> Result<HttpResponse, AWError> {
     let result = db::execute(&pool, Queries::CreateTable(form.name.clone())).await?;
 
@@ -45,9 +45,9 @@ pub async fn handle_create_table(
 async fn main() -> io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
-    let pool = SqlitePoolOptions::new()
+    let pool = MySqlPoolOptions::new()
         .max_connections(5)
-        .connect(&std::env::var("DATABASE_URL").unwrap())
+        .connect(&std::env::var("DATABASE_URL").expect("DATABASE_URL env var not set"))
         .await
         .unwrap();
 

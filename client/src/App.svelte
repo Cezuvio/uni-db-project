@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { Router, Route } from "svelte-routing";
   import Header from "./lib/Header.svelte";
-  import Body from "./lib/Body.svelte";
+  import Tables from "./lib/Tables.svelte";
+  import Rows from "./lib/Rows.svelte";
   import "./app.css";
   import type { Services } from "./types";
 
@@ -13,7 +15,12 @@
 
 <main>
   <Header {services} />
-  <Body {services} />
+  <Router>
+    <div class="container mx-auto pt-4">
+      <Route path="/" component={Tables} {services} />
+      <Route path="/rows" component={Rows} {services} />
+    </div>
+  </Router>
 </main>
 
 <style lang="postcss">

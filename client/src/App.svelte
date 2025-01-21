@@ -1,24 +1,38 @@
 <script lang="ts">
+  import { warnings } from "./stores/store";
   import { Router, Route } from "svelte-routing";
   import Header from "./lib/Header.svelte";
   import Tables from "./lib/Tables.svelte";
   import Rows from "./lib/Rows.svelte";
   import "./app.css";
-  import type { Services } from "./types";
 
-  const services: Services = {
-    table: "http://localhost:8080",
-    auth: "http://localhost:8081",
-    row: "http://localhost:8082",
+  const removeWarning = (index: number) => {
+    warnings.update((warnings) => {
+      return warnings.filter((_, i) => i !== index);
+    });
   };
 </script>
 
 <main>
-  <Header {services} />
+  {#each $warnings as warning, i}
+    <div
+      class="fixed top-10 left-1/2 transform -translate-x-1/2 w-auto max-w-md bg-red-500 text-white p-4 rounded shadow-lg z-50 flex items-center justify-between"
+    >
+      <span>{warning}</span>
+      <button
+        class="pl-2 text-white font-bold"
+        on:click={() => removeWarning(i)}
+      >
+        &times;
+      </button>
+    </div>
+  {/each}
+
+  <Header />
   <Router>
     <div class="container mx-auto pt-4">
-      <Route path="/" component={Tables} {services} />
-      <Route path="/rows" component={Rows} {services} />
+      <Route path="/" component={Tables} />
+      <Route path="/rows" component={Rows} />
     </div>
   </Router>
 </main>

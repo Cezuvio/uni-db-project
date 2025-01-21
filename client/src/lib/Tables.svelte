@@ -1,10 +1,11 @@
 <script lang="ts">
+  import { services } from "../stores/store";
+  import { Link } from "svelte-routing";
+
   import { onMount } from "svelte";
-  import type { Table, Services } from "../types";
+  import type { Table } from "../types";
   import AddButton from "./Tables/AddButton.svelte";
   import RemoveButton from "./Tables/RemoveButton.svelte";
-
-  export let services: Services;
 
   let tables: Table[] = [];
 
@@ -13,7 +14,7 @@
   });
 
   async function fetchTables(): Promise<Table[]> {
-    const response = await fetch(services.table + "/tables");
+    const response = await fetch($services.table + "/tables");
     const result = await response.json();
     return result.map((item: { Table: Table }) => item.Table);
   }
@@ -21,7 +22,7 @@
 
 <div class="flex items-center mb-4 w-full">
   <h1 class="text-2xl font-bold">Database Administration Panel</h1>
-  <AddButton bind:tables {services} />
+  <AddButton bind:tables />
 </div>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -32,10 +33,12 @@
       <div class="flex items-center">
         <h2 class="text-xl font-bold">{table.name}</h2>
         {#if table.name !== "admins"}
-          <RemoveButton bind:tables {services} {index} />
+          <RemoveButton bind:tables {index} />
         {/if}
       </div>
-      <a href="/rows" class="text-blue-500 underline">View and manage users</a>
+      <Link to="/rows" class="text-blue-500 underline"
+        >View and manage users</Link
+      >
     </div>
   {/each}
 </div>

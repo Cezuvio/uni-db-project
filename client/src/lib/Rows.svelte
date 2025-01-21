@@ -1,7 +1,5 @@
 <script lang="ts">
-  import type { Services } from "../types";
-
-  export let services: Services;
+  import { services } from "../stores/store";
 </script>
 
-<p>{services.row}</p>
+<p>{$services.row}</p>

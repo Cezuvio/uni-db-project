@@ -1,7 +1,5 @@
 <script lang="ts">
-  import type { Services } from "../../types";
-
-  export let services: Services;
+  import { services } from "../../stores/store";
 
   let popup = false;
   let username = "";
@@ -16,7 +14,7 @@
     password: string,
   ): Promise<void> {
     try {
-      const response = await fetch(services.auth + "/login", {
+      const response = await fetch($services.auth + "/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",

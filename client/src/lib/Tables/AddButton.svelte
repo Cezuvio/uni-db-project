@@ -1,8 +1,8 @@
 <script lang="ts">
-  import type { Table, Services, Row } from "../../types";
+  import type { Table, Row } from "../../types";
   import RowsForm from "./AddButton/RowsForm.svelte";
+  import { services } from "../../stores/store";
 
-  export let services: Services;
   export let tables: Table[];
   let name: string | null = null;
   let popup = false;
@@ -47,7 +47,7 @@
 
   async function addTable(name: string | null, rows: any[]): Promise<void> {
     if (name == null || rows.some((row) => row.name === "")) return;
-    const response = await fetch(services.table + "/table", {
+    const response = await fetch($services.table + "/table", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",

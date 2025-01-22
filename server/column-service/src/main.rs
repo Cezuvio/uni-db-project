@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{get, middleware, web, App, Error as AWError, HttpResponse, HttpServer};
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlRow;
@@ -24,7 +25,6 @@ pub async fn handle_get_table(
     pool: web::Data<MySqlPool>,
     name: web::Path<String>,
 ) -> Result<HttpResponse, AWError> {
-    // Sanitize table name to prevent SQL injection
     let table_name = name.into_inner();
     if !table_name.chars().all(|c| c.is_alphanumeric() || c == '_') {
         return Ok(HttpResponse::BadRequest().body("Invalid table name"));
@@ -81,6 +81,11 @@ async fn main() -> io::Result<()> {
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .wrap(middleware::Logger::default())
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allowed_methods(vec!["GET", "POST", "DELETE"]),
+            )
             .service(handle_get_table)
     })
     .bind(("0.0.0.0", 8080))?

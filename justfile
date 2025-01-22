@@ -1,6 +1,3 @@
-network:
-  @docker network create net
-
 stop:
   @docker stop $(docker ps -aq)
 

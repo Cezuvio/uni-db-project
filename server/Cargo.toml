@@ -2,6 +2,6 @@
 resolver = "2"
 members = [
   "table-service",
-  "row-service",
+  "column-service",
   "auth-service",
 ]

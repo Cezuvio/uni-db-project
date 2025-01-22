@@ -1,19 +1,20 @@
 services:
   client:
-    image: oven/bun
+    image: oven/bun:latest
     working_dir: /app
     ports:
       - "5173:5173"
     volumes:
-      - ./client:/app
-      - /app/node_modules
+      - ./client:/app:delegated
+      - client-node-modules:/app/node_modules
     environment:
       - NODE_ENV=development
     command: >
       sh -c "bun install &&
-             bun run dev --host"
+             bun run dev --host 0.0.0.0"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   table-service:
     image: rust:latest
@@ -21,14 +22,15 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./server/table-service:/usr/src/app
+      - ./server/table-service:/usr/src/app:delegated
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
     environment:
       - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
     command: cargo run --bin table-service
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   auth-service:
     image: rust:latest
@@ -36,35 +38,39 @@ services:
     ports:
       - "8081:8080"
     volumes:
-      - ./server/auth-service:/usr/src/app
+      - ./server/auth-service:/usr/src/app:delegated
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
     environment:
       - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
     command: cargo run --bin auth-service
-    restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
-  row-service:
+  column-service:
     image: rust:latest
     working_dir: /usr/src/app
     ports:
       - "8082:8080"
     volumes:
-      - ./server/row-service:/usr/src/app
+      - ./server/column-service:/usr/src/app:delegated
       - cargo-cache:/usr/local/cargo/registry
       - target-cache:/usr/src/app/target
     environment:
       - DATABASE_URL=mysql://user:password@db:3306/db?ssl-mode=DISABLED
-    command: cargo run --bin row-service
-    restart: always
+    command: cargo run --bin column-service
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mysql:5.7
-    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     environment:
       MYSQL_DATABASE: "db"
       MYSQL_USER: "user"
@@ -72,8 +78,6 @@ services:
       MYSQL_ROOT_PASSWORD: "password"
     ports:
       - "3306:3306"
-    expose:
-      - "3306"
     volumes:
       - database:/var/lib/mysql
 
@@ -81,3 +85,8 @@ volumes:
   cargo-cache:
   target-cache:
   database:
+  client-node-modules:
+
+networks:
+  default:
+    driver: bridge

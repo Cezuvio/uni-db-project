@@ -1,3 +1,4 @@
+use actix_cors::Cors;
 use actix_web::{middleware, post, web, App, Error as AWError, HttpResponse, HttpServer};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
@@ -44,6 +45,11 @@ async fn main() -> io::Result<()> {
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .wrap(middleware::Logger::default())
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allowed_methods(vec!["GET", "POST", "DELETE"]),
+            )
             .service(handle_login)
     })
     .bind(("0.0.0.0", 8080))?

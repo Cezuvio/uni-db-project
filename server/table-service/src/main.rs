@@ -1,5 +1,6 @@
 mod db;
 
+use actix_cors::Cors;
 use actix_web::{
     delete, get, middleware, post, web, App, Error as AWError, HttpResponse, HttpServer,
 };
@@ -55,6 +56,11 @@ async fn main() -> io::Result<()> {
         App::new()
             .app_data(web::Data::new(pool.clone()))
             .wrap(middleware::Logger::default())
+            .wrap(
+                Cors::default()
+                    .allow_any_origin()
+                    .allowed_methods(vec!["GET", "POST", "DELETE"]),
+            )
             .service(handle_get_tables)
             .service(handle_create_table)
             .service(handle_delete_table)
